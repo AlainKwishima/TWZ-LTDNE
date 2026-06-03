@@ -1,0 +1,37 @@
+{
+  "name": "fire-extinguisher-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fire Extinguisher Management System - Full-stack microservice application",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n gateway,auth,asset,service-req,notification,reporting,frontend -c blue,green,red,white,gray,brightBlue,brightYellow \"npm run dev -w @fems/api-gateway\" \"npm run dev -w @fems/auth-service\" \"npm run dev -w @fems/asset-service\" \"npm run dev -w @fems/service-request-service\" \"npm run dev -w @fems/notification-service\" \"npm run dev -w @fems/reporting-service\" \"npm run dev -w @fems/frontend\"",
+    "dev:services": "concurrently -n gateway,auth,asset,service-req,notification,reporting -c blue,green,red,white,gray,brightBlue \"npm run dev -w @fems/api-gateway\" \"npm run dev -w @fems/auth-service\" \"npm run dev -w @fems/asset-service\" \"npm run dev -w @fems/service-request-service\" \"npm run dev -w @fems/notification-service\" \"npm run dev -w @fems/reporting-service\"",
+    "build": "npm run build --workspaces --if-present",
+    "generate:all": "npm run prisma:generate --workspaces --if-present",
+    "migrate:all": "npm run prisma:migrate:deploy --workspaces --if-present",
+    "seed:all": "npm run prisma:seed --workspaces --if-present",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "sync:env": "node scripts/sync-service-env.mjs",
+    "verify:config": "npm run build -w @fems/shared && node scripts/verify-config.mjs",
+    "test:email": "npm run build -w @fems/shared && node scripts/test-brevo.mjs",
+    "export:db": "powershell -ExecutionPolicy Bypass -File scripts/export-databases.ps1",
+    "test:e2e": "playwright test -c scripts/e2e/playwright.config.ts",
+    "test:unit": "npm run test -w @fems/shared && npm run test -w @fems/auth-service"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "concurrently": "^9.1.2",
+    "prisma": "^5.22.0",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

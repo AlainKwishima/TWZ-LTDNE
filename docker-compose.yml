@@ -1,0 +1,188 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fems-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: fems-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    container_name: fems-auth-service
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/auth_service_db
+      JWT_SECRET: ${JWT_SECRET}
+      OTP_SECRET: ${OTP_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      BREVO_API_KEY: ${BREVO_API_KEY}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-FEMS}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      PORT: 4001
+      NODE_ENV: production
+    ports:
+      - "4001:4001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  asset-service:
+    build:
+      context: .
+      dockerfile: services/asset-service/Dockerfile
+    container_name: fems-asset-service
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/asset_service_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      NOTIFICATION_SERVICE_URL: http://notification-service:4007
+      PORT: 4005
+      NODE_ENV: production
+    ports:
+      - "4005:4005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  service-request-service:
+    build:
+      context: .
+      dockerfile: services/service-request-service/Dockerfile
+    container_name: fems-service-request-service
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/service_request_service_db
+      JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      ASSET_SERVICE_URL: http://asset-service:4005
+      PORT: 4006
+      NODE_ENV: production
+    ports:
+      - "4006:4006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      asset-service:
+        condition: service_started
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    container_name: fems-notification-service
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/notification_service_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET}
+      BREVO_API_KEY: ${BREVO_API_KEY}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-FEMS}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+      SMS_PROVIDER: ${SMS_PROVIDER}
+      ASSET_SERVICE_URL: http://asset-service:4005
+      SERVICE_REQUEST_SERVICE_URL: http://service-request-service:4006
+      PORT: 4007
+      NODE_ENV: production
+    ports:
+      - "4007:4007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  reporting-service:
+    build:
+      context: .
+      dockerfile: services/reporting-service/Dockerfile
+    container_name: fems-reporting-service
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/reporting_service_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      AUTH_SERVICE_URL: http://auth-service:4001
+      ASSET_SERVICE_URL: http://asset-service:4005
+      NOTIFICATION_SERVICE_URL: http://notification-service:4007
+      SERVICE_REQUEST_SERVICE_URL: http://service-request-service:4006
+      EXPORT_DIR: /app/exports
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 4008
+      NODE_ENV: production
+    ports:
+      - "4008:4008"
+    volumes:
+      - report_storage:/app/exports
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: fems-api-gateway
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      AUTH_SERVICE_URL: http://auth-service:4001
+      ASSET_SERVICE_URL: http://asset-service:4005
+      SERVICE_REQUEST_SERVICE_URL: http://service-request-service:4006
+      NOTIFICATION_SERVICE_URL: http://notification-service:4007
+      REPORTING_SERVICE_URL: http://reporting-service:4008
+      PORT: 4000
+      NODE_ENV: production
+      FRONTEND_URL: http://localhost:5173
+    ports:
+      - "4000:4000"
+    depends_on:
+      - auth-service
+      - asset-service
+      - service-request-service
+      - notification-service
+      - reporting-service
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4000/api
+    container_name: fems-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api-gateway
+
+volumes:
+  postgres_data:
+  report_storage:

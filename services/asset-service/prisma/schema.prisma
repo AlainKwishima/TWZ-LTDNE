@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AssetStatus {
+  Active
+  ExpiringSoon
+  Expired
+  Serviced
+  NeedsReplacement
+  HighRisk
+}
+
+model FireExtinguisherAsset {
+  id                String                @id @default(uuid())
+  // Internal code; kept in sync with serialNumber for notifications/events
+  assetCode         String                @unique
+  // Portal user id (owner scope for RBAC)
+  customerId        String
+  serialNumber      String                @unique
+  location          String?
+  type              String
+  size              String
+  installationDate  DateTime              @default(now())
+  expirationDate    DateTime
+  serviceDate       DateTime?
+  nextServiceDate   DateTime?
+  refillBookedAt    DateTime?
+  status            AssetStatus           @default(Active)
+  notes             String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  histories         AssetHistory[]
+  serviceRecords    AssetServiceRecord[]
+
+  @@index([customerId])
+  @@index([type])
+  @@index([status])
+  @@index([expirationDate])
+  @@index([serialNumber])
+  @@index([installationDate])
+  @@map("fire_extinguisher_assets")
+}
+
+model AssetHistory {
+  id          String                @id @default(uuid())
+  assetId     String
+  eventType   String
+  description String
+  oldStatus   AssetStatus?
+  newStatus   AssetStatus?
+  metadata    Json?
+  createdBy   String?
+  createdAt   DateTime              @default(now())
+  asset       FireExtinguisherAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([createdAt])
+  @@map("asset_histories")
+}
+
+model AssetServiceRecord {
+  id              String                @id @default(uuid())
+  assetId         String
+  serviceType     String
+  serviceDate     DateTime              @default(now())
+  technicianId    String?
+  technicianName  String?
+  notes           String?
+  nextServiceDate DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  asset           FireExtinguisherAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([serviceDate])
+  @@map("asset_service_records")
+}

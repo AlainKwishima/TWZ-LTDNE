@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum NotificationChannel {
+  Email
+  SMS
+  InApp
+}
+
+enum NotificationStatus {
+  Pending
+  Sent
+  Failed
+  Delivered
+  Acknowledged
+}
+
+enum NotificationCategory {
+  Order
+  Invoice
+  Asset
+  Service
+  Escalation
+  Expiry
+  System
+}
+
+model NotificationTemplate {
+  id            String              @id @default(uuid())
+  code          String              @unique
+  name          String
+  channel       NotificationChannel
+  subject       String?
+  body          String
+  htmlBody      String?
+  eventType     String?
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  notifications Notification[]
+
+  @@index([eventType])
+  @@index([channel])
+  @@map("notification_templates")
+}
+
+model Notification {
+  id              String               @id @default(uuid())
+  userId          String?
+  customerId      String?
+  recipientEmail  String?
+  recipientPhone  String?
+  channel         NotificationChannel
+  category        NotificationCategory @default(System)
+  subject         String?
+  body            String
+  status          NotificationStatus   @default(Pending)
+  eventType       String?
+  eventPayload    Json?
+  templateId      String?
+  template        NotificationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  seenAt          DateTime?
+  acknowledgedAt  DateTime?
+  sentAt          DateTime?
+  failedAt        DateTime?
+  failureReason   String?
+  resendCount     Int                  @default(0)
+  metadata        Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  logs            NotificationLog[]
+
+  @@index([userId])
+  @@index([customerId])
+  @@index([channel])
+  @@index([status])
+  @@index([category])
+  @@map("notifications")
+}
+
+model NotificationLog {
+  id             String              @id @default(uuid())
+  notificationId String
+  notification   Notification        @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  action         String
+  channel        NotificationChannel
+  detail         String?
+  metadata       Json?
+  createdAt      DateTime            @default(now())
+
+  @@index([notificationId])
+  @@index([action])
+  @@map("notification_logs")
+}
+
+model ExpiryAlertTracker {
+  id                String   @id @default(uuid())
+  assetId           String   @unique
+  assetCode         String
+  customerId        String
+  userId            String?
+  expirationDate    DateTime
+  customerSeenAt    DateTime?
+  refillBookedAt    DateTime?
+  alertsResolvedAt  DateTime?
+  lastReminderSentAt DateTime?
+  policeReportSent  Boolean  @default(false)
+  alert30Sent       Boolean  @default(false)
+  alert7Sent        Boolean  @default(false)
+  alertOnExpirySent Boolean  @default(false)
+  alertOverdueSent  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([expirationDate])
+  @@index([customerId])
+  @@map("expiry_alert_trackers")
+}

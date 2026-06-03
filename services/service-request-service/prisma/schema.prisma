@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ServiceRequestType {
+  Refill
+  Inspection
+  Replacement
+  TechnicianVisit
+}
+
+enum ServiceRequestStatus {
+  Pending
+  Assigned
+  InProgress
+  Completed
+  Cancelled
+}
+
+model ServiceRequest {
+  id                String               @id @default(uuid())
+  requestNumber     String               @unique
+  customerId        String
+  assetId           String
+  requestedByUserId String?
+  type              ServiceRequestType
+  status            ServiceRequestStatus @default(Pending)
+  description       String?
+  scheduledDate     DateTime?
+  priority          String               @default("normal")
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  assignment        TechnicianAssignment?
+  notes             ServiceNote[]
+  completion        ServiceCompletion?
+  activities        ServiceRequestActivity[]
+
+  @@index([customerId])
+  @@index([assetId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("service_requests")
+}
+
+model TechnicianAssignment {
+  id               String         @id @default(uuid())
+  serviceRequestId String         @unique
+  technicianId     String
+  technicianName   String?
+  assignedBy       String?
+  assignedAt       DateTime       @default(now())
+  notes            String?
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+
+  @@index([technicianId])
+  @@map("technician_assignments")
+}
+
+model ServiceNote {
+  id               String         @id @default(uuid())
+  serviceRequestId String
+  content          String
+  createdBy        String?
+  authorRole       String?
+  createdAt        DateTime       @default(now())
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+
+  @@index([serviceRequestId])
+  @@index([createdAt])
+  @@map("service_notes")
+}
+
+model ServiceRequestActivity {
+  id               String                @id @default(uuid())
+  serviceRequestId String
+  eventType        String
+  description      String
+  actorId          String?
+  actorRole        String?
+  oldStatus        ServiceRequestStatus?
+  newStatus        ServiceRequestStatus?
+  metadata         Json?
+  createdAt        DateTime              @default(now())
+  serviceRequest   ServiceRequest        @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+
+  @@index([serviceRequestId])
+  @@index([createdAt])
+  @@map("service_request_activities")
+}
+
+model ServiceCompletion {
+  id                 String         @id @default(uuid())
+  serviceRequestId   String         @unique
+  technicianId       String
+  completedAt        DateTime       @default(now())
+  summary            String
+  workPerformed      String?
+  partsUsed          String?
+  nextServiceDate    DateTime?
+  nextExpirationDate DateTime?
+  serviceRequest     ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+
+  @@index([technicianId])
+  @@index([completedAt])
+  @@map("service_completions")
+}

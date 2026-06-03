@@ -1,0 +1,12 @@
+﻿{
+    "databases":  [
+                      "auth_service_db",
+                      "asset_service_db",
+                      "service_request_service_db",
+                      "notification_service_db",
+                      "reporting_service_db"
+                  ],
+    "method":  "docker",
+    "exportedAt":  "2026-06-03T11:40:21.6463920Z",
+    "container":  "fems-postgres"
+}

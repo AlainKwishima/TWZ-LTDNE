@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReportType {
+  sales
+  customers
+  inventory
+  low_stock
+  asset_inventory
+  expired_assets
+  expiring_soon
+  service_requests
+  notifications
+  invoices
+  escalations
+}
+
+enum ExportFormat {
+  pdf
+  csv
+  xlsx
+}
+
+enum ReportStatus {
+  pending
+  completed
+  failed
+}
+
+model GeneratedReport {
+  id           String        @id @default(uuid())
+  reportType   ReportType
+  title        String
+  status       ReportStatus  @default(pending)
+  rowCount     Int           @default(0)
+  summary      Json?
+  dataSnapshot Json?
+  generatedBy  String?
+  errorMessage String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  filters      ReportFilter?
+  exports      ReportExport[]
+
+  @@index([reportType])
+  @@index([status])
+  @@index([createdAt])
+  @@map("generated_reports")
+}
+
+model ReportFilter {
+  id                String          @id @default(uuid())
+  generatedReportId String          @unique
+  dateFrom          DateTime?
+  dateTo            DateTime?
+  customerId        String?
+  productType       String?
+  status            String?
+  technicianId      String?
+  paymentStatus     String?
+  createdAt         DateTime        @default(now())
+  generatedReport   GeneratedReport @relation(fields: [generatedReportId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([productType])
+  @@index([status])
+  @@map("report_filters")
+}
+
+model ReportExport {
+  id                String          @id @default(uuid())
+  generatedReportId String
+  format            ExportFormat
+  filePath          String
+  fileName          String
+  fileSize          Int
+  mimeType          String
+  createdAt         DateTime        @default(now())
+  generatedReport   GeneratedReport @relation(fields: [generatedReportId], references: [id], onDelete: Cascade)
+
+  @@index([generatedReportId])
+  @@index([format])
+  @@map("report_exports")
+}
