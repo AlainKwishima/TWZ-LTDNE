@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { errorResponse, mountSwagger } from '@fems/shared';
+import { createFemsOpenApiSpec, errorResponse, mountSwagger } from '@fems/shared';
 import { gatewayConfig } from './config/services.js';
 import { createProxyRoutes } from './routes/proxy.routes.js';
 
@@ -16,7 +16,12 @@ async function bootstrap() {
 
   const app = express();
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+    })
+  );
   app.use(
     cors({
       origin: gatewayConfig.frontendUrl,
@@ -33,8 +38,12 @@ async function bootstrap() {
   });
 
   mountSwagger(app, {
-    serviceName: SERVICE_NAME,
-    description: 'API gateway — proxied routes are documented on each microservice.',
+    serviceName: 'FEMS API',
+    description: 'Unified TWZ LTD Fire Extinguisher Management System API',
+    spec: createFemsOpenApiSpec({
+      gateway: true,
+      serverUrl: process.env.API_PUBLIC_URL || `http://localhost:${gatewayConfig.port}`,
+    }),
   });
 
   app.use(createProxyRoutes());
@@ -45,7 +54,10 @@ async function bootstrap() {
   });
 
   app.listen(gatewayConfig.port, () => {
+    const base = process.env.API_PUBLIC_URL || `http://localhost:${gatewayConfig.port}`;
     console.log(`[${SERVICE_NAME}] Listening on port ${gatewayConfig.port}`);
+    console.log(`[${SERVICE_NAME}] Swagger UI: ${base}/api-docs`);
+    console.log(`[${SERVICE_NAME}] OpenAPI JSON: ${base}/api-docs.json`);
     console.log(`[${SERVICE_NAME}] Frontend CORS origin: ${gatewayConfig.frontendUrl}`);
   });
 }

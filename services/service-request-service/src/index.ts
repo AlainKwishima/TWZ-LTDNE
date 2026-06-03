@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { EventBus, successResponse, mountSwagger } from '@fems/shared';
+import { EventBus, createServiceRequestOpenApiSpec, successResponse, mountSwagger } from '@fems/shared';
 import { prisma } from './prisma/client.js';
 import { ServiceRequestService } from './services/service-request.service.js';
 import { createServiceRequestRoutes } from './routes/service-request.routes.js';
@@ -27,7 +27,10 @@ async function bootstrap() {
     });
   });
 
-  mountSwagger(app, { serviceName: 'service-request-service' });
+  mountSwagger(app, {
+    serviceName: 'service-request-service',
+    spec: createServiceRequestOpenApiSpec(`http://localhost:${PORT}`),
+  });
 
   app.get('/internal/inspections/overdue', async (req, res) => {
     try {

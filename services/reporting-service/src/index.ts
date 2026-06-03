@@ -2,7 +2,16 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { DomainEvent, EventBus, EventType, SERVICE_PORTS, successResponse, errorResponse, mountSwagger } from '@fems/shared';
+import {
+  DomainEvent,
+  EventBus,
+  EventType,
+  SERVICE_PORTS,
+  createReportingOpenApiSpec,
+  successResponse,
+  errorResponse,
+  mountSwagger,
+} from '@fems/shared';
 import { prisma } from './prisma/client.js';
 import { AnalyticsCacheService } from './services/analytics-cache.service.js';
 import { createReportingRoutes } from './routes/report.routes.js';
@@ -39,7 +48,10 @@ async function bootstrap() {
   app.get('/health', (_req, res) => {
     successResponse(res, 'Reporting service is healthy', { service: SERVICE_NAME });
   });
-  mountSwagger(app, { serviceName: SERVICE_NAME });
+  mountSwagger(app, {
+    serviceName: SERVICE_NAME,
+    spec: createReportingOpenApiSpec(`http://localhost:${PORT}`),
+  });
 
   const { reportRoutes, analyticsRoutes } = createReportingRoutes(eventBus, cacheService, JWT_SECRET);
   app.use('/reports', reportRoutes);

@@ -17,7 +17,7 @@ import { prisma } from './prisma/client.js';
 import { TemplateService } from './services/template.service.js';
 import { ExpiryCronService } from './services/expiry-cron.service.js';
 import { ComplianceCronService } from './services/compliance-cron.service.js';
-import { mountSwagger } from '@fems/shared';
+import { createNotificationOpenApiSpec, mountSwagger } from '@fems/shared';
 import { bootstrapNotificationTemplates } from './services/template-bootstrap.js';
 import { createNotificationRoutes, createTemplateRoutes } from './routes/notification.routes.js';
 import { EmailService } from './services/email.service.js';
@@ -64,7 +64,10 @@ async function bootstrap() {
     successResponse(res, 'Notification service is healthy', { service: SERVICE_NAME });
   });
 
-  mountSwagger(app, { serviceName: SERVICE_NAME });
+  mountSwagger(app, {
+    serviceName: SERVICE_NAME,
+    spec: createNotificationOpenApiSpec(`http://localhost:${PORT}`),
+  });
 
   app.post('/internal/compliance-alerts', async (_req, res) => {
     try {

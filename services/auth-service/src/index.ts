@@ -2,7 +2,14 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { EventBus, SERVICE_PORTS, errorResponse, successResponse, mountSwagger } from '@fems/shared';
+import {
+  EventBus,
+  SERVICE_PORTS,
+  createAuthServiceOpenApiSpec,
+  errorResponse,
+  successResponse,
+  mountSwagger,
+} from '@fems/shared';
 import { prisma } from './prisma/client.js';
 import { createAuthRoutes } from './routes/auth.routes.js';
 import { createUserRoutes } from './routes/user.routes.js';
@@ -38,16 +45,7 @@ async function bootstrap() {
 
   mountSwagger(app, {
     serviceName: SERVICE_NAME,
-    paths: {
-      '/health': { get: { summary: 'Health check' } },
-      '/signup': { post: { summary: 'Register account' } },
-      '/login': { post: { summary: 'Sign in' } },
-      '/users': { get: { summary: 'List users (Admin)' }, post: { summary: 'Create user (Admin)' } },
-      '/users/{id}': {
-        get: { summary: 'Get user (Admin)' },
-        patch: { summary: 'Update user (Admin)' },
-      },
-    },
+    spec: createAuthServiceOpenApiSpec(`http://localhost:${PORT}`),
   });
 
   app.get('/internal/users/:id/contact', async (req, res) => {

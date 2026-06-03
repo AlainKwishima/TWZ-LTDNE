@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cron from 'node-cron';
-import { EventBus, successResponse, mountSwagger } from '@fems/shared';
+import { EventBus, createAssetServiceOpenApiSpec, successResponse, mountSwagger } from '@fems/shared';
 import { createRoutes } from './routes/index.js';
 import { AssetService, ExpiryCronService } from './services/asset.service.js';
 import { listAssetsForExpiryWatch } from './services/expiry-watch.service.js';
@@ -49,7 +49,10 @@ async function bootstrap() {
     successResponse(res, 'Asset service is healthy', { service: 'asset-service' });
   });
 
-  mountSwagger(app, { serviceName: 'asset-service' });
+  mountSwagger(app, {
+    serviceName: 'asset-service',
+    spec: createAssetServiceOpenApiSpec(`http://localhost:${PORT}`),
+  });
 
   app.post('/internal/expiry-check', async (_req, res) => {
     try {

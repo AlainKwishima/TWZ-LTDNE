@@ -22,6 +22,8 @@
     "verify:config": "npm run build -w @fems/shared && node scripts/verify-config.mjs",
     "test:email": "npm run build -w @fems/shared && node scripts/test-brevo.mjs",
     "export:db": "powershell -ExecutionPolicy Bypass -File scripts/export-databases.ps1",
+    "docs": "npm run build -w @fems/shared && npm run dev -w @fems/api-gateway",
+    "docs:all": "npm run build -w @fems/shared && npm run dev",
     "test:e2e": "playwright test -c scripts/e2e/playwright.config.ts",
     "test:unit": "npm run test -w @fems/shared && npm run test -w @fems/auth-service"
   },
