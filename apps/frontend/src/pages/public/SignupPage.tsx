@@ -100,28 +100,7 @@ export default function SignupPage() {
       <p className="mt-2 text-sm text-muted-foreground">Choose your role and get started with TWZ LTD</p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="role">Role</Label>
-          <Select
-            value={selectedRole}
-            onValueChange={(value) => setValue('role', value as FormData['role'], { shouldValidate: true })}
-          >
-            <SelectTrigger id="role">
-              <SelectValue placeholder="Select your role" />
-            </SelectTrigger>
-            <SelectContent>
-              {SIGNUP_ROLE_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedRoleInfo && (
-            <p className="text-xs text-muted-foreground">{selectedRoleInfo.description}</p>
-          )}
-          {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
-        </div>
+        
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="firstName">First name</Label>

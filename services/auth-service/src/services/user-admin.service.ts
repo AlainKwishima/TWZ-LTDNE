@@ -5,6 +5,11 @@ import { prisma } from '../prisma/client.js';
 import { AuthError } from './auth.errors.js';
 import { provisionCustomerProfile } from './customer-provisioning.service.js';
 import { formatFullName } from '../utils/user-name.js';
+import {
+  notifyInspectorRoleAssigned,
+  shouldNotifyInspectorPromotion,
+  type AdminUpdateContext,
+} from './inspector-appointment.service.js';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -165,13 +170,16 @@ export class UserAdminService {
       phoneNumber?: string | null;
       role?: UserRole;
       isActive?: boolean;
-    }
+    },
+    auditCtx: AdminUpdateContext = {}
   ) {
     const user = await prisma.user.findUnique({
       where: { id },
       include: { roles: { include: { role: true } } },
     });
     if (!user) throw new AuthError('User not found', 404);
+
+    const previousRole = resolvePrimaryRole(user);
 
     const data: Prisma.UserUpdateInput = {};
     if (input.firstName !== undefined) data.firstName = input.firstName.trim();
@@ -210,6 +218,21 @@ export class UserAdminService {
           });
         }
       }
+    }
+
+    if (shouldNotifyInspectorPromotion(previousRole, input.role)) {
+      void notifyInspectorRoleAssigned(
+        {
+          id: updated.id,
+          email: updated.email,
+          firstName: updated.firstName,
+          lastName: updated.lastName,
+        },
+        {
+          ...auditCtx,
+          previousRole,
+        }
+      );
     }
 
     return sanitize(updated);

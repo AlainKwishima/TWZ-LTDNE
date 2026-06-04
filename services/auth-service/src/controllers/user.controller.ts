@@ -35,7 +35,11 @@ export class UserController {
 
   update = async (req: AuthRequest, res: Response) => {
     try {
-      const user = await this.userAdminService.updateUser(req.params.id, req.body);
+      const user = await this.userAdminService.updateUser(req.params.id, req.body, {
+        adminUserId: req.user?.userId,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
       return successResponse(res, 'User updated', user);
     } catch (error) {
       return this.handleError(res, error);

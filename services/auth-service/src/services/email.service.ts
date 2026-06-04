@@ -100,6 +100,79 @@ export class EmailService {
     await this.deliver(to, subject, text, html, ['password-reset']);
   }
 
+  async sendInspectorAppointmentEmail(input: {
+    to: string;
+    fullName: string;
+    institutionName: string;
+  }): Promise<void> {
+    const loginUrl = `${getFrontendUrl()}/login`;
+    const dashboardUrl = `${getFrontendUrl()}/inspector/dashboard`;
+    const subject = `You have been appointed as an Inspector — ${input.institutionName}`;
+    const text = [
+      `Dear ${input.fullName},`,
+      '',
+      `The administration of ${input.institutionName} has appointed you to serve as an Inspector on the Fire Extinguisher Management System.`,
+      '',
+      'Your account role: Inspector',
+      '',
+      'As an Inspector you can:',
+      '- Sign in to the inspector portal',
+      '- View assigned maintenance requests',
+      '- Update request status and complete field work',
+      '- Access asset information relevant to your assignments',
+      '',
+      'Next steps:',
+      `1. Sign in at ${loginUrl}`,
+      `2. Open your dashboard at ${dashboardUrl}`,
+      '3. Review any maintenance requests already assigned to you',
+      '',
+      'If you did not expect this appointment, contact your system administrator.',
+      '',
+      `— ${input.institutionName} Administration`,
+    ].join('\n');
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+        <h2 style="color: #2563eb;">Inspector appointment</h2>
+        <p>Dear <strong>${input.fullName}</strong>,</p>
+        <p>
+          The administration of <strong>${input.institutionName}</strong> has appointed you to serve as an
+          <strong>Inspector</strong> on the Fire Extinguisher Management System.
+        </p>
+        <p style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 12px 16px; margin: 20px 0;">
+          <strong>Your new role:</strong> Inspector
+        </p>
+        <p><strong>What you can do:</strong></p>
+        <ul style="padding-left: 20px; line-height: 1.6;">
+          <li>Sign in to the inspector portal</li>
+          <li>View and work on maintenance requests assigned to you</li>
+          <li>Update request status and record completion details</li>
+          <li>Access asset information for your field assignments</li>
+        </ul>
+        <p><strong>Next steps:</strong></p>
+        <ol style="padding-left: 20px; line-height: 1.6;">
+          <li>Sign in with your registered email address</li>
+          <li>Open your inspector dashboard</li>
+          <li>Review any requests waiting for your action</li>
+        </ol>
+        <p style="margin: 28px 0;">
+          <a href="${loginUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; margin-right: 8px;">
+            Sign in
+          </a>
+          <a href="${dashboardUrl}" style="display: inline-block; background: #ffffff; color: #2563eb; text-decoration: none; padding: 11px 18px; border-radius: 8px; font-weight: bold; border: 2px solid #2563eb;">
+            Inspector dashboard
+          </a>
+        </p>
+        <p style="color: #6b7280; font-size: 14px;">
+          If you did not expect this appointment, please contact your system administrator.
+        </p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">— ${input.institutionName} Administration</p>
+      </div>
+    `;
+
+    await this.deliver(input.to, subject, text, html, ['inspector-appointment', 'role-change']);
+  }
+
   private async deliver(
     to: string,
     subject: string,
